@@ -2,12 +2,12 @@ from datetime import datetime
 from google import genai
 from google.genai import types
 import json
-from duckduckgo_search import DDGS 
+import os
 
 # --- CONFIG ---
 # 🚨 REPLACE WITH YOUR ACTUAL PROJECT ID
-PROJECT_ID = "balmy-link-478420-c0" 
-LOCATION = "us-central1"
+PROJECT_ID = os.getenv("GCP_PROJECT_ID", "local-dev-project")
+LOCATION = os.getenv("GCP_REGION", "us-central1")
 
 # ==========================================
 # 1. MEDICAL ANALYSIS (Empathetic & Scannable)

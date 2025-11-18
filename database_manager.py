@@ -1,10 +1,12 @@
 from google.cloud import firestore
 from datetime import datetime
 import uuid
+import os
 
 # --- CONFIG ---
 # 🚨 REPLACE WITH YOUR ACTUAL PROJECT ID
-PROJECT_ID = "balmy-link-478420-c0"
+PROJECT_ID = os.getenv("GCP_PROJECT_ID", "local-dev-project")
+LOCATION = os.getenv("GCP_REGION", "us-central1")
 
 def get_db():
     """

@@ -5,8 +5,8 @@ import os
 
 # --- CONFIG ---
 # 🚨 REPLACE WITH YOUR REAL PROJECT ID
-PROJECT_ID = "balmy-link-478420-c0"
-LOCATION = "us-central1"
+PROJECT_ID = os.getenv("GCP_PROJECT_ID", "local-dev-project")
+LOCATION = os.getenv("GCP_REGION", "us-central1")
 
 def analyze_blood_report(image_bytes, mime_type="image/jpeg"):
     """
