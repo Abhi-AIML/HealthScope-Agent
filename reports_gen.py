@@ -42,9 +42,18 @@ def analyze_blood_report(image_bytes, mime_type="image/jpeg"):
             ]
         )
         
-        # Clean Markdown if present
-        text = response.text.replace("```json", "").replace("```", "").strip()
-        return json.loads(text)
+        text = response.text
         
+        # --- FIX 2: ROBUST JSON PARSING ---
+        # 1. Clean Markdown if present
+        clean_text = text.replace("```json", "").replace("```", "").strip()
+        # 2. Attempt load
+        return json.loads(clean_text)
+        
+    except json.JSONDecodeError as e:
+        print(f"❌ JSON PARSING FAILED. Raw text response was not valid JSON.")
+        print(f"DEBUG: {text[:200]}...") # Print first 200 chars for context
+        return []
     except Exception as e:
+        print(f"❌ Vision API Error: {e}")
         return []
