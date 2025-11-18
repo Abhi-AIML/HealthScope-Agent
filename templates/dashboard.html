@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<div class="flex h-[calc(100vh-80px)] overflow-hidden gap-6 p-6">
+    
+    <div class="w-3/5 overflow-y-auto pr-2 custom-scroll">
+        <div class="flex justify-between items-center mb-6">
+            <div>
+                <h2 class="text-2xl font-bold text-white">Clinical Assessment</h2>
+                <p class="text-gray-500 text-xs">Status: Analyzed • Date: {{ current_date }}</p>
+            </div>
+            <a href="/reset" class="text-xs bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2 rounded-lg transition border border-zinc-700">New Scan</a>
+        </div>
+
+        <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-8 shadow-lg">
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Pathologist's Note</h3>
+            <div id="summary-content" class="prose prose-invert prose-sm max-w-none text-gray-300 leading-relaxed">
+                Loading...
+            </div>
+        </div>
+
+        <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Biomarker Data</h3>
+        <div class="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-900/50">
+            <table class="min-w-full divide-y divide-zinc-800">
+                <thead class="bg-zinc-950">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Test Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Result</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-zinc-800">
+                    {% for item in report_data %}
+                    <tr class="hover:bg-zinc-800/50 transition">
+                        <td class="px-6 py-3 whitespace-nowrap text-sm font-medium text-white">{{ item.test_name }}</td>
+                        <td class="px-6 py-3 whitespace-nowrap text-sm text-gray-400">{{ item.result }} {{ item.unit }}</td>
+                        <td class="px-6 py-3 whitespace-nowrap text-sm">
+                            {% if item.status in ['High', 'H', 'HIGH'] %}
+                            <span class="px-2 py-1 rounded-md bg-red-900/30 text-red-400 border border-red-500/20 text-xs">High</span>
+                            {% elif item.status in ['Low', 'L', 'LOW'] %}
+                            <span class="px-2 py-1 rounded-md bg-yellow-900/30 text-yellow-400 border border-yellow-500/20 text-xs">Low</span>
+                            {% else %}
+                            <span class="px-2 py-1 rounded-md bg-green-900/30 text-green-400 border border-green-500/20 text-xs">Normal</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="w-2/5 flex flex-col bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden">
+        <div class="p-4 border-b border-zinc-800 bg-zinc-950 flex justify-between items-center">
+            <div>
+                <h3 class="text-sm font-bold text-white">Agent Assistant</h3>
+                <p class="text-[10px] text-green-500 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> ONLINE
+                </p>
+            </div>
+        </div>
+
+        <div id="chat-box" class="flex-1 overflow-y-auto p-4 space-y-4 bg-zinc-900/50">
+            {% if not chat_history %}
+            <div class="text-center mt-10 text-gray-600 text-xs">
+                <p>Agent Online.</p>
+                <p>Try: "Find price of Spinach"</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <div id="typing-indicator" class="hidden px-4 py-2 text-xs text-zinc-500 italic flex gap-1 items-center bg-zinc-900">
+             <span class="w-1 h-1 bg-zinc-500 rounded-full animate-bounce"></span>
+             <span class="w-1 h-1 bg-zinc-500 rounded-full animate-bounce delay-75"></span>
+             Agent is searching...
+        </div>
+
+        <div class="p-4 border-t border-zinc-800 bg-zinc-950">
+            <form id="chat-form" class="flex gap-2" onsubmit="sendMessage(event)">
+                <input type="text" id="user-input" 
+                    class="flex-1 bg-black border border-zinc-700 text-white text-sm rounded-xl px-4 py-3 focus:outline-none focus:border-green-500 transition placeholder-zinc-700"
+                    placeholder="Ask about prices, recipes..." autocomplete="off">
+                <button type="submit" class="bg-white hover:bg-zinc-200 text-black p-3 rounded-xl transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 1. RENDER MARKDOWN
+    document.addEventListener("DOMContentLoaded", function() {
+        const rawSummary = {{ summary | tojson }};
+        document.getElementById('summary-content').innerHTML = marked.parse(rawSummary);
+        
+        const history = {{ chat_history | tojson }};
+        const chatBox = document.getElementById('chat-box');
+        if(history.length > 0) chatBox.innerHTML = '';
+        history.forEach(msg => appendMessage(msg.role, msg.content));
+    });
+
+    const chatBox = document.getElementById('chat-box');
+    const typingIndicator = document.getElementById('typing-indicator');
+
+    // 2. DIRECT SIDEBAR CONTROL (The Fix)
+    function setSidebarBusy(isBusy) {
+        const agentLed = document.getElementById('led-agent');
+        const searchLed = document.getElementById('led-search');
+        
+        if (isBusy) {
+            // Turn Green Pulse
+            if(agentLed) { agentLed.className = 'status-dot thinking'; }
+            if(searchLed) { searchLed.className = 'status-dot thinking'; }
+        } else {
+            // Turn Yellow Idle
+            if(agentLed) { agentLed.className = 'status-dot idle'; }
+            if(searchLed) { searchLed.className = 'status-dot idle'; }
+        }
+    }
+
+    // 3. CHAT LOGIC
+    async function sendMessage(e) {
+        e.preventDefault();
+        const input = document.getElementById('user-input');
+        const message = input.value.trim();
+        if (!message) return;
+
+        appendMessage('user', message);
+        input.value = '';
+        
+        // START ANIMATION
+        typingIndicator.classList.remove('hidden');
+        setSidebarBusy(true); // <--- ACTIVATE LEDS
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message })
+            });
+            
+            const data = await response.json();
+            
+            // STOP ANIMATION
+            typingIndicator.classList.add('hidden');
+            setSidebarBusy(false); // <--- DEACTIVATE LEDS
+            
+            appendMessage('assistant', data.response);
+
+        } catch (error) {
+            typingIndicator.classList.add('hidden');
+            setSidebarBusy(false);
+            appendMessage('assistant', "⚠️ Error connecting to agent.");
+        }
+    }
+
+    function appendMessage(role, text) {
+        const div = document.createElement('div');
+        div.className = `flex w-full ${role === 'user' ? 'justify-end' : 'justify-start'}`;
+        
+        const bubble = document.createElement('div');
+        bubble.className = `max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm prose prose-invert 
+            ${role === 'user' ? 'bg-green-600 text-black font-medium' : 'bg-zinc-800 text-gray-200 border border-zinc-700'}`;
+        
+        bubble.innerHTML = role === 'assistant' ? marked.parse(text) : text;
+        
+        div.appendChild(bubble);
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+</script>
+
+<style>
+    .prose ul { list-style-type: disc !important; padding-left: 1.2em !important; }
+    .prose strong { color: white !important; font-weight: 700 !important; }
+    .custom-scroll::-webkit-scrollbar { width: 6px; }
+    .custom-scroll::-webkit-scrollbar-track { background: #09090B; }
+    .custom-scroll::-webkit-scrollbar-thumb { background: #27272A; border-radius: 3px; }
+    .custom-scroll::-webkit-scrollbar-thumb:hover { background: #00D290; }
+    .prose ul, 
+    .prose ol {
+        list-style-position: outside !important;
+        padding-left: 20px !important; 
+        margin-top: 8px !important;
+        margin-bottom: 8px !important;
+    }
+    .prose li {
+        margin-bottom: 0.4em !important;
+        /* Ensure the bullet itself is visible */
+        color: #ddd !important; 
+    }
+    
+    /* Ensure Strong text is bright */
+    .prose strong { color: #fff !important; font-weight: 700 !important; }
+</style>
+{% endblock %}

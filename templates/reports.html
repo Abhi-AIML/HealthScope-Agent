@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<div class="max-w-5xl mx-auto px-4 py-12">
+    
+    <div class="flex justify-between items-end mb-10">
+        <div>
+            <h1 class="text-4xl font-black text-white tracking-tight mb-2">Patient Records</h1>
+            <p class="text-zinc-500">Longitudinal history for <span class="text-green-500 font-mono">#USR-88291</span></p>
+        </div>
+        <a href="/upload_page" class="bg-white text-black hover:bg-zinc-200 px-6 py-3 rounded-full text-sm font-bold transition shadow-lg shadow-white/10">
+            + New Analysis
+        </a>
+    </div>
+
+    {% if history %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for record in history %}
+            <a href="{{ url_for('view_report', report_id=record.id) }}" class="group block">
+                <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 hover:border-green-500/50 hover:bg-zinc-900/80 transition-all duration-300 h-full flex flex-col relative overflow-hidden">
+                    
+                    <div class="absolute top-0 right-0 w-20 h-20 bg-green-500/5 rounded-bl-full -mr-10 -mt-10 transition group-hover:bg-green-500/10"></div>
+
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_8px_#00D290]"></div>
+                        <span class="text-2xl font-bold text-white font-mono tracking-tight">{{ record.date }}</span>
+                    </div>
+
+                    <div class="flex-grow">
+                        <p class="text-sm text-zinc-400 line-clamp-3 leading-relaxed report-summary-text">
+                            {{ record.summary }}
+                        </p>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-zinc-800/50 flex justify-between items-center">
+                        <span class="text-[10px] font-mono text-zinc-600 uppercase">ID: {{ record.id[-6:] }}</span>
+                        <span class="text-xs font-bold text-green-500 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                            OPEN FILE →
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="flex flex-col items-center justify-center h-96 border-2 border-dashed border-zinc-800 rounded-3xl bg-zinc-900/20">
+            <div class="text-4xl mb-2">📂</div>
+            <p class="text-gray-500 text-sm mb-6">No records found. Upload a report to create a timeline.</p>
+            <a href="/upload_page" class="text-green-500 text-sm font-bold hover:underline">Initialize First Scan</a>
+        </div>
+    {% endif %}
+
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Select all elements containing the summary text
+        const summaryElements = document.querySelectorAll('.report-summary-text');
+        
+        summaryElements.forEach(element => {
+            const rawText = element.textContent.trim();
+            // Use marked.parse to convert Markdown to HTML
+            element.innerHTML = marked.parse(rawText);
+            
+            // Apply custom CSS for clean preview (e.g., small text for headers)
+            element.classList.add('prose', 'prose-sm', 'prose-invert'); 
+        });
+    });
+</script>
+{% endblock %}

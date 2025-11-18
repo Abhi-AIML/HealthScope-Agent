@@ -1,0 +1,16 @@
+# --- Python and Environment ---
+__pycache__/
+*.pyc
+venv/
+.venv/
+.DS_Store
+
+# --- CREDENTIALS AND HACKATHON DATA (CRITICAL) ---
+ignore.json
+my_keys.json
+credentials.json
+service-account.json
+# Local history file
+history_db.json
+# Temp uploads folder
+uploads/

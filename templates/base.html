@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HealthScope Agent OS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        gray: { 900: '#09090B', 800: '#18181B', 700: '#27272A' },
+                        green: { 500: '#00D290', 600: '#00b87e' },
+                        yellow: { 500: '#FACC15' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #000000; color: #E0E0E0; }
+        
+        /* --- STATUS LIGHTS (Logic: Yellow=Idle, Green=Thinking) --- */
+        .status-dot {
+            height: 8px; width: 8px; border-radius: 50%;
+            background-color: #333; transition: all 0.2s ease;
+        }
+        
+        /* IDLE STATE (Yellow) */
+        .status-dot.idle {
+            background-color: #FACC15;
+            box-shadow: 0 0 5px #FACC15;
+            opacity: 0.8;
+        }
+        
+        /* THINKING STATE (Green Pulse) */
+        .status-dot.thinking {
+            background-color: #00D290;
+            box-shadow: 0 0 12px #00D290;
+            animation: pulse 0.5s infinite;
+        }
+        
+        @keyframes pulse { 
+            0% { opacity: 1; transform: scale(1); } 
+            50% { opacity: 0.6; transform: scale(0.9); } 
+            100% { opacity: 1; transform: scale(1); } 
+        }
+
+        /* Sidebar Glass */
+        #sidebar { background: rgba(10, 10, 10, 0.6); backdrop-filter: blur(20px); border-right: 1px solid #27272A; }
+        
+        /* Loader Overlay */
+        #loader-overlay { backdrop-filter: blur(15px); background-color: rgba(0,0,0,0.85); }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <aside id="sidebar" class="w-72 hidden md:flex flex-col justify-between p-6 z-50 h-full fixed left-0 top-0 pt-24">
+        <div class="space-y-8">
+            <div>
+                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Live API Status</h3>
+                <div class="space-y-4 font-mono text-xs">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400">Gemini Vision</span>
+                        <div id="led-vision" class="status-dot idle"></div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400">Agent Reasoning</span>
+                        <div id="led-agent" class="status-dot idle"></div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400">Real-Time Web Search</span>
+                        <div id="led-search" class="status-dot idle"></div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400">Firestore DB</span>
+                        <div id="led-db" class="status-dot idle"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-4">Node Context</h3>
+                <div class="bg-gray-900/50 border border-gray-800 p-4 rounded-lg">
+                    <div class="flex justify-between mb-2"><span class="text-[10px] text-gray-500">LOC</span><span class="text-xs text-white font-bold">BENGALURU</span></div>
+                    <div class="flex justify-between"><span class="text-[10px] text-gray-500">UID</span><span class="text-xs text-yellow-500 font-mono">#8X-9921</span></div>
+                </div>
+            </div>
+        </div>
+        <div class="text-[10px] text-gray-700 font-mono text-center">SYSTEM V2.5 // STABLE</div>
+    </aside>
+
+    <nav class="fixed top-0 left-0 w-full h-16 z-[60] border-b border-gray-800 flex items-center justify-between px-6 md:px-8 bg-black/80 backdrop-blur-md">
+        <div class="flex items-center gap-3">
+            <div class="w-3 h-3 bg-yellow-500 rounded-full shadow-[0_0_10px_#FACC15]"></div>
+            <span class="font-bold text-lg tracking-widest text-white font-mono">HealthScope Agent</span>
+        </div>
+
+        <div class="flex items-center gap-8 text-sm font-medium">
+            <a href="/" class="transition-colors duration-200 {% if request.path == '/' %}text-yellow-500 font-bold{% else %}text-gray-400 hover:text-white{% endif %}">HOME</a>
+            <a href="/load_history" class="transition-colors duration-200 {% if request.path == '/dashboard' or request.path == '/reports' %}text-yellow-500 font-bold{% else %}text-gray-400 hover:text-white{% endif %}">VIEW REPORTS</a>
+            {% if request.path != '/' %}
+            <a href="/" class="bg-white text-black px-4 py-1.5 rounded-full text-xs font-bold hover:bg-gray-200 transition">+ NEW UPLOAD</a>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div id="loader-overlay" class="hidden fixed inset-0 z-[100] flex flex-col items-center justify-center">
+        <div class="w-96">
+            <div class="flex justify-between text-xs font-mono text-yellow-500 mb-2">
+                <span id="loader-status">INITIALIZING...</span><span id="loader-percent">0%</span>
+            </div>
+            <div class="w-full h-1 bg-gray-800 rounded-full overflow-hidden relative">
+                <div id="progress-bar" class="h-full bg-yellow-500 shadow-[0_0_15px_#FACC15] w-0 transition-all duration-300 ease-out"></div>
+            </div>
+            <div class="mt-6 text-center font-mono text-xs text-gray-500"><span id="loader-detail">Establishing secure connection...</span></div>
+        </div>
+    </div>
+
+    <main class="flex-1 md:ml-72 pt-16 h-full overflow-auto relative bg-black">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        // --- 1. UPLOAD ANIMATION ---
+        function runSequence() {
+            const loader = document.getElementById('loader-overlay');
+            const bar = document.getElementById('progress-bar');
+            const status = document.getElementById('loader-status');
+            const detail = document.getElementById('loader-detail');
+            const percent = document.getElementById('loader-percent');
+            
+            const setLed = (id, state) => {
+                const el = document.getElementById(id);
+                if(el) { el.className = 'status-dot'; el.classList.add(state); }
+            };
+
+            loader.classList.remove('hidden'); loader.classList.add('flex');
+            
+            // Start Vision
+            setLed('led-vision', 'thinking'); // GREEN PULSE
+            bar.style.width = "10%";
+
+            setTimeout(() => {
+                status.innerText = "VISION CORE"; detail.innerText = "Extracting biomarkers..."; percent.innerText = "35%"; bar.style.width = "35%";
+                setLed('led-vision', 'idle');
+                setLed('led-agent', 'thinking');
+            }, 1500);
+
+            setTimeout(() => {
+                status.innerText = "AGENT REASONING"; detail.innerText = "Synthesizing summary..."; percent.innerText = "75%"; bar.style.width = "75%";
+                setLed('led-agent', 'idle');
+                setLed('led-db', 'thinking');
+            }, 3500);
+
+            setTimeout(() => {
+                status.innerText = "FINALIZING"; detail.innerText = "Archiving to Firestore..."; percent.innerText = "99%"; bar.style.width = "99%";
+                setLed('led-db', 'idle');
+                setLed('led-search', 'idle');
+            }, 5500);
+        }
+        document.addEventListener("DOMContentLoaded", function() {
+            const path = window.location.pathname;
+
+            const setLed = (id, state) => {
+                const el = document.getElementById(id);
+                if(el) { el.className = 'status-dot'; el.classList.add(state); }
+            };
+
+            const sidebarContent = document.getElementById('sidebar');
+
+            // Set all dots to ACTIVE (Green/Yellow, depending on CSS definitions) 
+            // if we are viewing data (either Dashboard or Reports list)
+            if (path.includes('/') || path.includes('/reports')) {
+                document.querySelectorAll('.status-dot').forEach(dot => dot.classList.add('active'));
+                
+            }
+            if (path.includes('/load_history')){
+                setLed('led-db', 'thinking');
+            }
+        });
+    </script>
+</body>
+</html>

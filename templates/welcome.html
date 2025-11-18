@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex flex-col items-center justify-center min-h-[80vh] px-4 relative z-10">
+    
+    <div class="text-center space-y-6 animate-fade-in-up">
+        
+        <h1 class="text-7xl md:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-zinc-600 tracking-tighter">
+            HealthScope Agent
+        </h1>
+        
+        <p class="text-xl text-zinc-400 font-light tracking-wide max-w-2xl mx-auto">
+            Your personal AI agent for proactive health monitoring and insights.
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-16 w-full max-w-3xl">
+        
+        <a href="/upload_page" class="group relative block p-8 bg-zinc-900/50 border border-zinc-800 rounded-2xl hover:border-green-500/50 hover:bg-zinc-900 transition-all duration-300">
+            <div class="absolute top-6 right-6 w-2 h-2 bg-green-500 rounded-full shadow-[0_0_10px_#00D290]"></div>
+            <h3 class="text-2xl font-bold text-white mb-2 group-hover:text-green-400 transition">Analyze New Report</h3>
+            <p class="text-zinc-500 text-sm">Upload diagnostics PDF/JPG. Run Vision Core & Agent Analysis.</p>
+            <div class="mt-6 flex items-center text-green-500 text-xs font-bold tracking-widest uppercase opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all">
+                Initialize →
+            </div>
+        </a>
+
+        <a href="/load_history" class="group relative block p-8 bg-zinc-900/50 border border-zinc-800 rounded-2xl hover:border-blue-500/50 hover:bg-zinc-900 transition-all duration-300">
+            <h3 class="text-2xl font-bold text-white mb-2 group-hover:text-blue-400 transition">View Patient Records</h3>
+            <p class="text-zinc-500 text-sm">Access longitudinal history, trends, and past prescriptions.</p>
+            <div class="mt-6 flex items-center text-blue-500 text-xs font-bold tracking-widest uppercase opacity-0 group-hover:opacity-100 transform translate-y-2 group-hover:translate-y-0 transition-all">
+                Access Database →
+            </div>
+        </a>
+
+    </div>
+</div>
+
+<style>
+    @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fade-in-up { animation: fadeInUp 1s ease-out forwards; }
+</style>
+{% endblock %}
