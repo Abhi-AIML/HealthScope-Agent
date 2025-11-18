@@ -1,13 +1,14 @@
 from datetime import datetime
+from duckduckgo_search import DDGS
 from google import genai
 from google.genai import types
 import json
 import os
 
 # --- CONFIG ---
-# 🚨 REPLACE WITH YOUR ACTUAL PROJECT ID
 PROJECT_ID = os.getenv("GCP_PROJECT_ID", "local-dev-project")
 LOCATION = os.getenv("GCP_REGION", "us-central1")
+
 
 # ==========================================
 # 1. MEDICAL ANALYSIS (Empathetic & Scannable)
